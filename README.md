@@ -104,3 +104,16 @@ Seller identity documents are encrypted before upload. The Blob object contains 
 - Use a production Paystack account and complete a real test transaction before going live.
 - Verify the Paystack webhook is configured and returning HTTP 200.
 - Test seller verification, product creation, checkout, shipping updates, delivery confirmation and dispute/refund flows on mobile.
+
+## Paystack test mode
+
+The checkout uses Paystack hosted checkout and keeps the secret key server-side. Do not put the secret key in source code, `.env.example`, browser code, or GitHub.
+
+In Vercel Production/Preview environment variables, add:
+- `PAYSTACK_SECRET_KEY` = your Paystack **test secret key**
+- `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` = your Paystack **test public key**
+- `NEXT_PUBLIC_APP_URL` = your deployed Fuguaa URL
+
+Use Paystack test cards/mobile-money methods while the account is in test mode. When you move to live payments, replace the test keys with live keys in Vercel only.
+
+Security: the test secret key that was pasted into chat should be considered exposed. For a real deployment, rotate/revoke that key in Paystack and use the replacement in Vercel.

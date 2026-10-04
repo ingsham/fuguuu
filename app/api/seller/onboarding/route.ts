@@ -31,7 +31,11 @@ export async function POST(req: Request) {
     if (country === 'Ghana' && documentType !== 'GHANA_CARD') return NextResponse.json({ error: 'Ghana sellers must submit a Ghana Card.' }, { status: 400 });
     if (country !== 'Ghana' && documentType !== 'PASSPORT') return NextResponse.json({ error: 'International sellers must submit a passport.' }, { status: 400 });
     const file = f.get('document') as File | null;
+    const photo = f.get('sellerPhoto') as File | null;
     if (!file) return NextResponse.json({ error: 'Identity document is required.' }, { status: 400 });
+    if (!photo) return NextResponse.json({ error: 'A clear seller profile photo is required for verification.' }, { status: 400 });
+    if (photo.size > 4 * 1024 * 1024) return NextResponse.json({ error: 'Maximum seller photo size is 4MB.' }, { status: 400 });
+    if (!['image/jpeg','image/png','image/webp'].includes(photo.type)) return NextResponse.json({ error: 'Seller photo must be JPG, PNG or WebP.' }, { status: 400 });
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Maximum document size is 5MB.' }, { status: 400 });
     const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
     if (!allowed.includes(file.type)) return NextResponse.json({ error: 'Unsupported document type. Use JPG, PNG or PDF.' }, { status: 400 });
@@ -43,6 +47,8 @@ export async function POST(req: Request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
     const encrypted = encryptBuffer(Buffer.from(await file.arrayBuffer()));
     const blob = await put(`seller-verification/${sellerId}-${Date.now()}-${safeName}.enc`, encrypted, { access: 'public', addRandomSuffix: true });
+    const photoName = photo.name.replace(/[^a-zA-Z0-9._-]/g, '-');
+    const photoBlob = await put(`seller-profiles/${sellerId}-${Date.now()}-${photoName}`, photo, { access: 'public', addRandomSuffix: true });
 
     await prisma.$transaction([
       prisma.sellerProfile.update({
@@ -53,6 +59,7 @@ export async function POST(req: Request) {
           region,
           country,
           verificationStatus: 'PENDING',
+          photoUrl: photoBlob.url,
         },
       }),
       prisma.sellerVerification.upsert({

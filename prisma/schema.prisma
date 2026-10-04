@@ -68,6 +68,7 @@ model User {
   passwordHash  String
   phone         String?
   country       String?
+  profileImageUrl String?
   role          Role           @default(BUYER)
   isActive      Boolean        @default(true)
   createdAt     DateTime       @default(now())
@@ -89,6 +90,7 @@ model SellerProfile {
   bio                String?
   region             String?
   country            String?
+  photoUrl            String?
   verificationStatus VerificationStatus  @default(PENDING)
   verifiedAt         DateTime?
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
