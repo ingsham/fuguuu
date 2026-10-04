@@ -13,7 +13,7 @@ DATABASE_URL=<your Neon pooled PostgreSQL connection string>
 DIRECT_URL=<your Neon direct PostgreSQL connection string>
 NEXTAUTH_SECRET=<a long random secret>
 NEXTAUTH_URL=https://<your-vercel-domain>
-NEXT_PUBLIC_APP_URL=https://<your-vercel-domain>
+APP_URL=https://<your-vercel-domain>
 ADMIN_EMAIL=<the email you want to use for the admin account>
 ADMIN_PASSWORD=<a strong password for the admin account>
 BLOB_READ_WRITE_TOKEN=<your Vercel Blob token>
@@ -23,7 +23,6 @@ Optional payment/email/SMS variables:
 
 ```text
 PAYSTACK_SECRET_KEY=
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=
 RESEND_API_KEY=
 EMAIL_FROM=
 TWILIO_ACCOUNT_SID=
@@ -78,7 +77,7 @@ Required Vercel Production environment variables:
 - `DIRECT_URL`
 - `NEXTAUTH_SECRET`
 - `NEXTAUTH_URL`
-- `NEXT_PUBLIC_APP_URL`
+- `APP_URL`
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `PAYSTACK_SECRET_KEY`
@@ -111,8 +110,7 @@ The checkout uses Paystack hosted checkout and keeps the secret key server-side.
 
 In Vercel Production/Preview environment variables, add:
 - `PAYSTACK_SECRET_KEY` = your Paystack **test secret key**
-- `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` = your Paystack **test public key**
-- `NEXT_PUBLIC_APP_URL` = your deployed Fuguaa URL
+- `APP_URL` = your deployed Fuguaa URL
 
 Use Paystack test cards/mobile-money methods while the account is in test mode. When you move to live payments, replace the test keys with live keys in Vercel only.
 

@@ -1,6 +1,6 @@
 export async function initializePaystack(email: string, amount: number, reference: string) {
   if (!process.env.PAYSTACK_SECRET_KEY) throw new Error('PAYSTACK_SECRET_KEY is missing');
-  const r = await fetch('https://api.paystack.co/transaction/initialize', { method: 'POST', headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, amount: Math.round(amount * 100), currency: 'GHS', reference, callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success?reference=${encodeURIComponent(reference)}` }) });
+  const r = await fetch('https://api.paystack.co/transaction/initialize', { method: 'POST', headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, amount: Math.round(amount * 100), currency: 'GHS', reference, callback_url: `${process.env.APP_URL}/checkout/success?reference=${encodeURIComponent(reference)}` }) });
   if (!r.ok) throw new Error('Paystack initialization failed');
   return r.json();
 }

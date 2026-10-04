@@ -5,7 +5,7 @@ import Image from 'next/image';
 import {getServerSession} from 'next-auth';
 import {authOptions} from '@/lib/auth';
 
-export const metadata:Metadata={metadataBase:new URL(process.env.NEXT_PUBLIC_APP_URL||'http://localhost:3000'),title:{default:'Fuguaa | Ghanaian Smocks & Traditional Craft',template:'%s | Fuguaa'},description:'Discover authentic Ghanaian smocks and handwoven clothing from verified artisans across Ghana.',keywords:['Fuguaa','Ghanaian smocks','Ghana smocks','traditional Ghanaian clothing','handwoven smocks','African fashion'],icons:{icon:'/fuguaa-mark.png'},openGraph:{title:'Fuguaa | Three generations of craft',description:'A marketplace for authentic Ghanaian smocks and traditional craft.'}};
+export const metadata:Metadata={metadataBase:new URL(process.env.APP_URL||'http://localhost:3000'),title:{default:'Fuguaa | Ghanaian Smocks & Traditional Craft',template:'%s | Fuguaa'},description:'Discover authentic Ghanaian smocks and handwoven clothing from verified artisans across Ghana.',keywords:['Fuguaa','Ghanaian smocks','Ghana smocks','traditional Ghanaian clothing','handwoven smocks','African fashion'],icons:{icon:'/fuguaa-mark.png'},openGraph:{title:'Fuguaa | Three generations of craft',description:'A marketplace for authentic Ghanaian smocks and traditional craft.'}};
 
 function firstName(name?:string|null){return String(name||'there').trim().split(/\s+/)[0]||'there'}
 
