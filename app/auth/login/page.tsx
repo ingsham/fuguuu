@@ -33,12 +33,20 @@ function LoginForm() {
 
       if (r?.ok) {
         try {
-          const account = await fetch('/api/account').then((x) => x.json());
-          if (account.role === 'SELLER' && !account.onboardingComplete) { router.push('/seller-onboarding'); router.refresh(); return; }
-        } catch {}
-        router.push(next);
-        router.refresh();
-        return;
+          const account = await fetch('/api/account', { cache: 'no-store' }).then((x) => x.json());
+          if (account.role === 'ADMIN') {
+            router.push('/dashboard/admin');
+          } else if (account.role === 'SELLER') {
+            router.push(account.onboardingComplete ? '/dashboard/seller' : '/seller-onboarding');
+          } else {
+            router.push('/shop');
+          }
+          router.refresh();
+          return;
+        } catch {
+          setError('Login succeeded, but we could not determine your account type. Please try again.');
+          return;
+        }
       }
 
       const message = String(r?.error || '').toLowerCase();
