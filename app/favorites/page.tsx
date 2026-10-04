@@ -1,0 +1,1 @@
+import Link from 'next/link';export default function Favorites(){return <main className="container-x py-20 text-center"><h1 className="text-4xl font-black">Your favorites</h1><p className="mt-3 text-black/60">Save the pieces you want to come back to.</p><Link href="/shop" className="btn btn-primary mt-7">Browse smocks</Link></main>}

@@ -1,0 +1,1 @@
+export const money=(n:number|string)=>new Intl.NumberFormat('en-GH',{style:'currency',currency:'GHS'}).format(Number(n));export const slugify=(s:string)=>s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
