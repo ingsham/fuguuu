@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const map = new Map(products.map(p => [p.id, p]));
     const requestedByProduct = new Map<string, number>();
     for (const i of parsed.items) requestedByProduct.set(i.id, (requestedByProduct.get(i.id) || 0) + i.quantity);
-    for (const [productId, quantity] of requestedByProduct) {
+    for (const [productId, quantity] of Array.from(requestedByProduct.entries())) {
       const p = map.get(productId)!;
       if (quantity > p.stock) return NextResponse.json({ error: `Not enough stock for ${p.title}.` }, { status: 400 });
     }
