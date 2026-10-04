@@ -4,8 +4,15 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@fuguaa.com').trim().toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe123!';
+  const adminEmail = (process.env.ADMIN_EMAIL || (process.env.NODE_ENV === 'production' ? '' : 'admin@fuguaa.com')).trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === 'production' ? '' : 'ChangeMe123!');
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error('ADMIN_EMAIL and ADMIN_PASSWORD must be set in Vercel Production environment variables.');
+  }
+  if (adminPassword.length < 8) {
+    throw new Error('ADMIN_PASSWORD must be at least 8 characters long.');
+  }
 
   await prisma.user.upsert({
     where: { email: adminEmail },
