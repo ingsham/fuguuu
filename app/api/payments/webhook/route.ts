@@ -19,6 +19,10 @@ export async function POST(req: Request) {
     if (verified.data?.status === 'success') {
       const checkout = await prisma.checkout.findUnique({ where: { reference: ref }, include: { orders: { include: { items: true, seller: { include: { user: true } } } }, payment: true, buyer: true } });
       if (checkout && checkout.payment?.status !== 'SUCCESS') {
+        if (verified.data?.currency !== 'GHS' || Number(verified.data?.amount) !== Math.round(Number(checkout.total) * 100)) {
+          console.error('PAYMENT_AMOUNT_MISMATCH', { ref, expected: Number(checkout.total) * 100, received: verified.data?.amount, currency: verified.data?.currency });
+          return NextResponse.json({ received: true, rejected: true });
+        }
         try {
           await prisma.$transaction(async tx => {
             const claimed = await tx.payment.updateMany({ where: { checkoutId: checkout.id, status: 'PENDING' }, data: { status: 'SUCCESS' } });

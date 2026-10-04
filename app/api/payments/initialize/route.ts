@@ -21,9 +21,14 @@ export async function POST(req: Request) {
     const products = await prisma.product.findMany({ where: { id: { in: ids }, status: 'ACTIVE' }, include: { seller: true } });
     if (products.length !== ids.length) return NextResponse.json({ error: 'One or more products are unavailable.' }, { status: 400 });
     const map = new Map(products.map(p => [p.id, p]));
+    const requestedByProduct = new Map<string, number>();
+    for (const i of parsed.items) requestedByProduct.set(i.id, (requestedByProduct.get(i.id) || 0) + i.quantity);
+    for (const [productId, quantity] of requestedByProduct) {
+      const p = map.get(productId)!;
+      if (quantity > p.stock) return NextResponse.json({ error: `Not enough stock for ${p.title}.` }, { status: 400 });
+    }
     for (const i of parsed.items) {
       const p = map.get(i.id)!;
-      if (i.quantity > p.stock) return NextResponse.json({ error: `Not enough stock for ${p.title}.` }, { status: 400 });
       if (p.sizes.length && i.size && !p.sizes.includes(i.size)) return NextResponse.json({ error: `Selected size is unavailable for ${p.title}.` }, { status: 400 });
       if (p.colors.length && i.color && !p.colors.includes(i.color)) return NextResponse.json({ error: `Selected color is unavailable for ${p.title}.` }, { status: 400 });
     }
