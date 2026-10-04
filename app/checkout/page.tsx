@@ -12,15 +12,26 @@ export default function Checkout() {
   const [error, setError] = useState('');
   const router = useRouter();
   const selected = useMemo(() => countries.find(c => c.name === country) || countries[0], [country]);
-  useEffect(() => setItems(JSON.parse(localStorage.getItem('fuguaa_cart') || '[]')), []);
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem('fuguaa_cart') || '[]');
+      setItems(Array.isArray(raw) ? raw.map((x:any) => ({ ...x, id: String(x.id || ''), quantity: Math.max(1, Number(x.quantity) || 1), price: Number(x.price) || 0 })) : []);
+    } catch { setItems([]); }
+  }, []);
   const total = items.reduce((a, x) => a + Number(x.price) * x.quantity, 0);
   async function pay(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setBusy(true); setError('');
     try {
+      if (!items.length) throw new Error('Your cart is empty. Please add an item before paying.');
       const f = new FormData(e.currentTarget);
+      const value = (key: string) => String(f.get(key) || '').trim();
+      const phone = value('phone');
+      const shipping = { name: value('name'), phone: `${selected.dial}${phone.replace(/^0+/, '')}`, country: value('country') || country, region: value('region'), city: value('city'), address1: value('address1'), address2: value('address2'), postalCode: value('postalCode') };
+      const missing = ['name','phone','region','city','address1'].filter(k => !String((shipping as any)[k] || '').trim());
+      if (missing.length) throw new Error('Please complete all required delivery details before paying.');
       const r = await fetch('/api/payments/initialize', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-        items: items.map(x => ({ id: x.id, quantity: x.quantity, size: x.size, color: x.color })),
-        shipping: { name: f.get('name'), phone: `${selected.dial}${String(f.get('phone') || '').replace(/^0+/, '')}`, country, region: f.get('region'), city: f.get('city'), address1: f.get('address1'), address2: f.get('address2'), postalCode: f.get('postalCode') }
+        items: items.map(x => ({ id: String(x.id), quantity: Number(x.quantity), size: x.size ? String(x.size) : undefined, color: x.color ? String(x.color) : undefined })),
+        shipping
       }) });
       const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Unable to start payment');
       if (j.authorization_url) window.location.href = j.authorization_url; else router.push('/orders');

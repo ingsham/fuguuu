@@ -53,6 +53,6 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e: any) {
-    return NextResponse.json({ error: e instanceof z.ZodError ? 'Please complete your delivery details and cart items.' : e.message || 'Checkout failed.' }, { status: 400 });
+    return NextResponse.json({ error: e instanceof z.ZodError ? `Please check your delivery details: ${e.issues.map(i => `${i.path.join('.')} ${i.message}`).join('; ')}` : e.message || 'Checkout failed.' }, { status: 400 });
   }
 }
