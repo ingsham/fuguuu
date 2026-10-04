@@ -7,10 +7,10 @@ export default function Onboarding() {
   const router = useRouter();
   const [country,setCountry]=useState('Ghana');
   const selected=countries.find(c=>c.name===country)||countries[0];
-  useEffect(()=>{fetch('/api/account').then(r=>r.json()).then(a=>{if(!a.authenticated||a.role!=='SELLER'){router.push('/auth/login?next=%2Fseller-onboarding');}else if(a.onboardingComplete&&a.verificationStatus==='VERIFIED'){router.push('/dashboard/seller');}else if(a.country&&countries.some(c=>c.name===a.country)){setCountry(a.country);}}).catch(()=>{});},[router]);
+  useEffect(()=>{fetch('/api/account').then(r=>r.json()).then(a=>{if(!a.authenticated||a.role!=='SELLER'){router.push('/auth/login?next=%2Fseller-onboarding');}else if(a.onboardingComplete&&a.verificationStatus==='VERIFIED'){router.push('/dashboard/seller');}else if(a.country&&countries.some(c=>c.name===a.country)){setCountry(a.country);} if(a.rejectionReason) setRejection(a.rejectionReason);}).catch(()=>{});},[router]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState(false); const [rejection, setRejection] = useState('');
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,7 +43,7 @@ export default function Onboarding() {
     <div className="card p-7 sm:p-10">
       <p className="text-sm font-bold uppercase tracking-wider text-green">Seller verification</p>
       <h1 className="mt-2 text-3xl font-black">Tell us about your shop</h1>
-      <p className="mt-3 text-black/60">Your identity document is private and only accessible to authorized Fuguaa administrators.</p>
+      {rejection && <div className="mt-4 rounded-2xl bg-red-50 p-4 text-sm text-red-700"><strong>Previous application feedback:</strong> {rejection}<br/>You can correct your details and resubmit below.</div>}<p className="mt-3 text-black/60">Your identity document is private and only accessible to authorized Fuguaa administrators.</p>
       <form onSubmit={submit} className="mt-8 space-y-5">
         <input name="shopName" required placeholder="Shop name" className="field" />
         <textarea name="story" rows={5} placeholder="Your story (optional)" className="field" />

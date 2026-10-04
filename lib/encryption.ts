@@ -20,3 +20,21 @@ export function decryptSensitive(value: string) {
   decipher.setAuthTag(Buffer.from(tagB64, 'base64'));
   return Buffer.concat([decipher.update(Buffer.from(dataB64, 'base64')), decipher.final()]).toString('utf8');
 }
+
+export function encryptBuffer(input: Buffer) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key(), iv);
+  const encrypted = Buffer.concat([cipher.update(input), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([Buffer.from('FUG1'), iv, tag, encrypted]);
+}
+
+export function decryptBuffer(input: Buffer) {
+  if (input.subarray(0, 4).toString() !== 'FUG1') throw new Error('Unsupported encrypted document');
+  const iv = input.subarray(4, 16);
+  const tag = input.subarray(16, 32);
+  const data = input.subarray(32);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key(), iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(data), decipher.final()]);
+}

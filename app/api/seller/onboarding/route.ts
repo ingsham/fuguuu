@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { put } from '@vercel/blob';
-import { encryptSensitive } from '@/lib/encryption';
+import { encryptSensitive, encryptBuffer } from '@/lib/encryption';
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +20,16 @@ export async function POST(req: Request) {
     }
 
     const f = await req.formData();
+    const shopName = String(f.get('shopName') || '').trim();
+    const country = String(f.get('country') || '').trim();
+    const region = String(f.get('region') || '').trim();
+    const documentType = String(f.get('documentType') || '').trim();
+    const documentNumber = String(f.get('documentNumber') || '').trim();
+    if (shopName.length < 2 || shopName.length > 120) return NextResponse.json({ error: 'Shop name is required.' }, { status: 400 });
+    if (!country || !region) return NextResponse.json({ error: 'Country and region are required.' }, { status: 400 });
+    if (!documentNumber || documentNumber.length > 120) return NextResponse.json({ error: 'A valid identity document number is required.' }, { status: 400 });
+    if (country === 'Ghana' && documentType !== 'GHANA_CARD') return NextResponse.json({ error: 'Ghana sellers must submit a Ghana Card.' }, { status: 400 });
+    if (country !== 'Ghana' && documentType !== 'PASSPORT') return NextResponse.json({ error: 'International sellers must submit a passport.' }, { status: 400 });
     const file = f.get('document') as File | null;
     if (!file) return NextResponse.json({ error: 'Identity document is required.' }, { status: 400 });
     if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Maximum document size is 5MB.' }, { status: 400 });
@@ -31,25 +41,27 @@ export async function POST(req: Request) {
     if (!u?.sellerProfile) return NextResponse.json({ error: 'Seller profile not found. Please contact Fuguaa support.' }, { status: 404 });
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
-    const blob = await put(`seller-verification/${sellerId}-${Date.now()}-${safeName}`, file, { access: 'public', addRandomSuffix: true });
+    const encrypted = encryptBuffer(Buffer.from(await file.arrayBuffer()));
+    const blob = await put(`seller-verification/${sellerId}-${Date.now()}-${safeName}.enc`, encrypted, { access: 'public', addRandomSuffix: true });
 
     await prisma.$transaction([
       prisma.sellerProfile.update({
         where: { id: u.sellerProfile.id },
         data: {
-          shopName: String(f.get('shopName') || '').trim(),
+          shopName,
           bio: String(f.get('story') || '').trim(),
-          region: String(f.get('region') || '').trim(),
-          country: String(f.get('country') || '').trim(),
+          region,
+          country,
           verificationStatus: 'PENDING',
         },
       }),
       prisma.sellerVerification.upsert({
         where: { sellerId: u.sellerProfile.id },
         update: {
-          documentType: String(f.get('documentType')) as any,
-          documentNumberEncrypted: encryptSensitive(String(f.get('documentNumber') || '')),
+          documentType: documentType as any,
+          documentNumberEncrypted: encryptSensitive(documentNumber),
           documentUrl: blob.url,
+          documentMimeType: file.type,
           status: 'PENDING',
           submittedAt: new Date(),
           reviewedAt: null,
@@ -57,9 +69,10 @@ export async function POST(req: Request) {
         },
         create: {
           sellerId: u.sellerProfile.id,
-          documentType: String(f.get('documentType')) as any,
-          documentNumberEncrypted: encryptSensitive(String(f.get('documentNumber') || '')),
+          documentType: documentType as any,
+          documentNumberEncrypted: encryptSensitive(documentNumber),
           documentUrl: blob.url,
+          documentMimeType: file.type,
         },
       }),
     ]);

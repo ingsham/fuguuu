@@ -70,3 +70,37 @@ The real Fuguaa logo is stored in `public/fuguaa-logo.png` and `public/fuguaa-ma
 
 ## Global marketplace UX
 Country calling codes and region/state selectors are provided for supported markets. Admin listing moderation includes full listing editing. Footer links include Help Center, Shipping & Returns, Privacy, Terms, Seller Guide, and the admin entry via the copyright mark.
+
+## Phase 1 launch configuration
+
+Required Vercel Production environment variables:
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `NEXT_PUBLIC_APP_URL`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `PAYSTACK_SECRET_KEY`
+- `BLOB_READ_WRITE_TOKEN`
+
+Optional notifications:
+- `RESEND_API_KEY`, `EMAIL_FROM`
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+
+### Paystack
+Configure the Paystack webhook to point to:
+`https://YOUR-DOMAIN/api/payments/webhook`
+
+Paystack remains the payment processor. Fuguaa does not store raw card or mobile-money credentials. Checkout creates pending orders, Paystack verification/webhooks confirm successful payments, and inventory is decremented only after verified payment.
+
+### Identity documents
+Seller identity documents are encrypted before upload. The Blob object contains encrypted bytes; administrators access the decrypted document only through the authenticated admin document endpoint. Keep `NEXTAUTH_SECRET` stable: changing it makes existing encrypted identity records unreadable.
+
+### Launch safety
+- Never commit `.env.local` or production secrets.
+- Use a strong unique `ADMIN_PASSWORD` and `NEXTAUTH_SECRET`.
+- Enable Neon production backups/point-in-time recovery according to your Neon plan before launch.
+- Use a production Paystack account and complete a real test transaction before going live.
+- Verify the Paystack webhook is configured and returning HTTP 200.
+- Test seller verification, product creation, checkout, shipping updates, delivery confirmation and dispute/refund flows on mobile.

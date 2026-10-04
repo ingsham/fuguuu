@@ -103,6 +103,7 @@ model SellerVerification {
   documentType          DocumentType
   documentNumberEncrypted String
   documentUrl           String
+  documentMimeType      String?
   status                VerificationStatus @default(PENDING)
   rejectionReason       String?
   submittedAt           DateTime           @default(now())
@@ -204,6 +205,16 @@ model Order {
   paystackReference String?
   deliveredAt       DateTime?
   completedAt       DateTime?
+  shippingName      String?
+  shippingPhone     String?
+  shippingCountry   String?
+  shippingRegion    String?
+  shippingCity      String?
+  shippingAddress1  String?
+  shippingAddress2  String?
+  shippingPostalCode String?
+  shippingCarrier   String?
+  trackingNumber    String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   checkout          Checkout?     @relation(fields: [checkoutId], references: [id], onDelete: SetNull)

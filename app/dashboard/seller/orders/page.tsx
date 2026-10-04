@@ -57,7 +57,7 @@ export default async function SellerOrdersPage() {
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+            <div className="mb-4 rounded-xl bg-cream/60 p-4 text-sm"><p><strong>Ship to:</strong> {order.shippingName} · {order.shippingPhone}</p><p>{order.shippingAddress1}{order.shippingAddress2 ? `, ${order.shippingAddress2}` : ''}, {order.shippingCity}, {order.shippingRegion}, {order.shippingCountry}{order.shippingPostalCode ? ` · ${order.shippingPostalCode}` : ''}</p>{order.trackingNumber && <p className="mt-1"><strong>Tracking:</strong> {order.shippingCarrier} · {order.trackingNumber}</p>}</div><div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
               <p className="text-xs text-black/45">Placed {order.createdAt.toLocaleString()}</p>
               <OrderStatusActions orderId={order.id} status={order.status} />
             </div>
