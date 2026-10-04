@@ -8,20 +8,31 @@ const authSecret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 export const authOptions: NextAuthOptions = {
   secret: authSecret,
   session: { strategy: 'jwt' },
+  pages: { signIn: '/auth/login' },
   providers: [
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { type: 'email' },
-        password: { type: 'password' },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(c) {
         if (!c?.email || !c.password) return null;
-        const u = await prisma.user.findUnique({ where: { email: c.email } });
-        if (!u || !u.isActive) return null;
-        const valid = await bcrypt.compare(c.password, u.passwordHash);
-        if (!valid) return null;
-        return { id: u.id, name: u.name, email: u.email, role: u.role } as any;
+        if (!authSecret) {
+          console.error('AUTH_CONFIG_ERROR: NEXTAUTH_SECRET is missing');
+          throw new Error('Authentication is not configured. Add NEXTAUTH_SECRET in Vercel.');
+        }
+        try {
+          const email = String(c.email).trim().toLowerCase();
+          const u = await prisma.user.findUnique({ where: { email } });
+          if (!u || !u.isActive) return null;
+          const valid = await bcrypt.compare(String(c.password), u.passwordHash);
+          if (!valid) return null;
+          return { id: u.id, name: u.name, email: u.email, role: u.role } as any;
+        } catch (error) {
+          console.error('AUTH_DATABASE_ERROR', error);
+          throw new Error('Unable to access the Fuguaa database. Check DATABASE_URL in Vercel.');
+        }
       },
     }),
   ],

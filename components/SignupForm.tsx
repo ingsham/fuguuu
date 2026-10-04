@@ -12,8 +12,9 @@ export default function SignupForm({ seller = false }: { seller?: boolean }) {
     e.preventDefault();
     setError('');
     setBusy(true);
+    const form = e.currentTarget;
     try {
-      const f = new FormData(e.currentTarget);
+      const f = new FormData(form);
       const body = Object.fromEntries(f.entries());
       const r = await fetch('/api/signup', {
         method: 'POST',
@@ -25,15 +26,22 @@ export default function SignupForm({ seller = false }: { seller?: boolean }) {
         setError(j.error || 'Unable to create account. Please try again.');
         return;
       }
+
+      // Try automatic login, but never leave the user stuck if NextAuth is misconfigured.
       const login = await signIn('credentials', {
-        email: body.email,
-        password: body.password,
+        email: String(body.email),
+        password: String(body.password),
         redirect: false,
       });
-      if (login?.ok) router.push(seller ? '/seller-onboarding' : '/');
-      else setError('Account created, but automatic login failed. Please log in manually.');
-    } catch {
-      setError('We could not reach Fuguaa. Please check your connection and try again.');
+      if (login?.ok) {
+        router.push(seller ? '/seller-onboarding' : '/');
+        router.refresh();
+        return;
+      }
+      router.push(`/auth/login?created=1&next=${encodeURIComponent(seller ? '/seller-onboarding' : '/')}`);
+    } catch (err) {
+      console.error('SIGNUP_CLIENT_ERROR', err);
+      setError('We could not complete the signup. Please try again.');
     } finally {
       setBusy(false);
     }

@@ -12,7 +12,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "test": "vitest run",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma db push --accept-data-loss && prisma generate && next build",
+    "vercel-build": "prisma db push --accept-data-loss && prisma generate && prisma db seed && next build",
     "db:push": "prisma db push"
   },
   "dependencies": {
@@ -39,5 +39,8 @@
     "tailwindcss": "^3.4.17",
     "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

@@ -1,2 +1,51 @@
-import {NextResponse} from 'next/server';import {prisma} from '@/lib/prisma';import bcrypt from 'bcryptjs';import {z} from 'zod';
-const schema=z.object({name:z.string().min(2),email:z.string().email(),password:z.string().min(8),phone:z.string().min(7),country:z.string().min(2),role:z.enum(['BUYER','SELLER'])});export async function POST(req:Request){try{const b=schema.parse(await req.json());if(await prisma.user.findUnique({where:{email:b.email}}))return NextResponse.json({error:'An account with this email already exists.'},{status:409});const u=await prisma.user.create({data:{name:b.name,email:b.email,passwordHash:await bcrypt.hash(b.password,12),phone:b.phone,country:b.country,role:b.role as any,...(b.role==='SELLER'?{sellerProfile:{create:{shopName:`${b.name}'s Shop`,country:b.country}}}:{})}});return NextResponse.json({id:u.id},{status:201})}catch{return NextResponse.json({error:'Invalid signup details.'},{status:400})}}
+export const runtime = 'nodejs';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().trim().min(2).max(100),
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+  password: z.string().min(8).max(200),
+  phone: z.string().trim().min(7).max(30),
+  country: z.string().trim().min(2).max(80),
+  role: z.enum(['BUYER', 'SELLER']),
+});
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const b = schema.parse(body);
+    const existing = await prisma.user.findUnique({ where: { email: b.email } });
+    if (existing) {
+      return NextResponse.json({ error: 'An account with this email already exists. Please log in.' }, { status: 409 });
+    }
+
+    const passwordHash = await bcrypt.hash(b.password, 12);
+    const user = await prisma.user.create({
+      data: {
+        name: b.name,
+        email: b.email,
+        passwordHash,
+        phone: b.phone,
+        country: b.country,
+        role: b.role,
+        ...(b.role === 'SELLER'
+          ? { sellerProfile: { create: { shopName: `${b.name}'s Shop`, country: b.country } } }
+          : {}),
+      },
+    });
+
+    return NextResponse.json({ id: user.id, role: user.role }, { status: 201 });
+  } catch (error: any) {
+    console.error('SIGNUP_ERROR', error);
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ error: 'An account with this email already exists. Please log in.' }, { status: 409 });
+    }
+    if (error?.name === 'ZodError') {
+      return NextResponse.json({ error: 'Please check all fields and make sure the password is at least 8 characters.' }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'We could not create your account. Please check the database connection and try again.' }, { status: 500 });
+  }
+}
