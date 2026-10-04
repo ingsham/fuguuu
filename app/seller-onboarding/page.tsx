@@ -1,12 +1,16 @@
 'use client';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { countries } from '@/lib/locations';
 
 export default function Onboarding() {
+  const router = useRouter();
+  const [country,setCountry]=useState('Ghana');
+  const selected=countries.find(c=>c.name===country)||countries[0];
+  useEffect(()=>{fetch('/api/account').then(r=>r.json()).then(a=>{if(!a.authenticated||a.role!=='SELLER'){router.push('/auth/login?next=%2Fseller-onboarding');}else if(a.onboardingComplete&&a.verificationStatus==='VERIFIED'){router.push('/dashboard/seller');}else if(a.country&&countries.some(c=>c.name===a.country)){setCountry(a.country);}}).catch(()=>{});},[router]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [success, setSuccess] = useState(false);
-  const router = useRouter();
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,9 +47,9 @@ export default function Onboarding() {
       <form onSubmit={submit} className="mt-8 space-y-5">
         <input name="shopName" required placeholder="Shop name" className="field" />
         <textarea name="story" rows={5} placeholder="Your story (optional)" className="field" />
-        <input name="region" placeholder="Region" className="field" />
-        <select name="documentType" className="field"><option value="GHANA_CARD">Ghana Card</option><option value="PASSPORT">Passport</option><option value="OTHER">Other ID</option></select>
-        <input name="documentNumber" required placeholder="Ghana Card / passport number" className="field" />
+        <div><label className="label">Country</label><select name="country" className="field" value={country} onChange={e=>setCountry(e.target.value)}>{countries.map(c=><option key={c.code} value={c.name}>{c.name}</option>)}</select></div><div><label className="label">Region / State / Province</label><select name="region" className="field" defaultValue=""><option value="">Select region</option>{selected.regions.map(r=><option key={r} value={r}>{r}</option>)}</select></div>
+        <div><label className="label">Identity document type</label><select name="documentType" className="field">{country==='Ghana'?<option value="GHANA_CARD">Ghana Card</option>:<option value="PASSPORT">Passport</option>}<option value="OTHER">Other ID</option></select></div>
+        <input name="documentNumber" required placeholder={country==='Ghana'?'Ghana Card number':'Passport / ID number'} className="field" />
         <label className="block rounded-2xl border border-dashed border-black/15 bg-cream/50 p-5">
           <span className="font-bold">Upload identity document</span>
           <span className="mt-1 block text-sm text-black/50">Choose a JPG, PNG or PDF from your device (max 5MB).</span>

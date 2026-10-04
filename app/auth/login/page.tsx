@@ -32,6 +32,10 @@ function LoginForm() {
       });
 
       if (r?.ok) {
+        try {
+          const account = await fetch('/api/account').then((x) => x.json());
+          if (account.role === 'SELLER' && !account.onboardingComplete) { router.push('/seller-onboarding'); router.refresh(); return; }
+        } catch {}
         router.push(next);
         router.refresh();
         return;

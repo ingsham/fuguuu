@@ -66,3 +66,7 @@ Seller onboarding accepts an identity document from the seller's local device. C
 ## Logo / homepage
 
 The real Fuguaa logo is stored in `public/fuguaa-logo.png` and `public/fuguaa-mark.png`. The homepage hero uses the Fuguaa logo with woven textures, floating motion, rings and Ghana-inspired brand styling instead of a random stock photograph.
+
+
+## Global marketplace UX
+Country calling codes and region/state selectors are provided for supported markets. Admin listing moderation includes full listing editing. Footer links include Help Center, Shipping & Returns, Privacy, Terms, Seller Guide, and the admin entry via the copyright mark.

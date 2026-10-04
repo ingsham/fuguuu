@@ -40,6 +40,7 @@ export async function POST(req: Request) {
           shopName: String(f.get('shopName') || '').trim(),
           bio: String(f.get('story') || '').trim(),
           region: String(f.get('region') || '').trim(),
+          country: String(f.get('country') || '').trim(),
           verificationStatus: 'PENDING',
         },
       }),

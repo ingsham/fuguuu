@@ -12,7 +12,7 @@ export default function Hero() {
         <span className="inline-flex rounded-full border border-terracotta/15 bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[.2em] text-terracotta shadow-sm backdrop-blur">Made in Ghana</span>
         <h1 className="mt-6 text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl">Traditional craft, <span className="font-serif italic text-terracotta">made to be worn.</span></h1>
         <p className="mt-6 max-w-xl text-lg leading-8 text-black/65">Discover authentic smocks and handwoven pieces from verified Ghanaian makers. Every stitch carries a story.</p>
-        <div className="mt-8 flex flex-wrap gap-3"><Link className="btn btn-primary" href="/shop">Shop smocks</Link><Link className="btn btn-outline bg-white/80 backdrop-blur" href="/signup/seller">Become a seller</Link></div>
+        <div className="mt-8 flex flex-wrap gap-3"><Link className="btn btn-primary" href="/shop">Shop smocks</Link><Link className="btn btn-outline bg-white/80 backdrop-blur" href="/signup">Create your account</Link></div>
         <div className="mt-8 flex flex-wrap gap-5 text-sm font-semibold text-black/55"><span>✓ Verified makers</span><span>✓ Ghanaian craft</span><span>✓ Secure checkout</span></div>
       </div>
       <div className="hero-logo-stage">
