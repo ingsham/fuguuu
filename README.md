@@ -143,3 +143,27 @@ production PostgreSQL database.
 
 After deployment, open `/api/health`. A successful response contains
 `"ok": true` and `"database": "connected"`.
+
+## Troubleshooting the current Vercel deployment
+
+### Authentication / "There is a problem with the server configuration"
+
+Add these in **Vercel → Project → Settings → Environment Variables** for **Production**:
+
+- `NEXTAUTH_SECRET` — a long random secret (at least 32 characters)
+- `NEXTAUTH_URL` — your deployed Vercel URL, for example `https://your-project.vercel.app`
+- `NEXT_PUBLIC_APP_URL` — the same deployed URL
+
+After saving them, redeploy. Do not paste the secret into GitHub.
+
+### Seller verification stuck on "Uploading & submitting…"
+
+Seller ID documents are selected from the seller's device and uploaded to Vercel Blob. Add:
+
+- `BLOB_READ_WRITE_TOKEN` — the token from Vercel Blob Storage
+
+The seller form now times out after 30 seconds and shows a useful configuration error instead of remaining on the submitting state forever.
+
+### Admin dashboard error
+
+The admin dashboard now catches authentication/database configuration failures and shows a setup message. The seeded admin account comes from `ADMIN_EMAIL` and `ADMIN_PASSWORD` when `npm run db:seed` is run against the database.
