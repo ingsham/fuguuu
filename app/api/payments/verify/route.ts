@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 
     const checkout = await prisma.checkout.findFirst({
       where: { reference, buyerId: (s.user as any).id },
-      include: { payment: true, orders: { include: { items: true, seller: { include: { user: true } } } } },
+      include: { payment: true, orders: { include: { items: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } } } }, seller: { include: { user: true } } } } },
     });
     if (!checkout) return NextResponse.json({ error: 'Checkout not found.' }, { status: 404 });
 
@@ -48,21 +48,37 @@ export async function POST(req: Request) {
             email: (s.user as any).email,
             phone: (s.user as any).phone,
           }),
-          ...checkout.orders.map(order =>
-            notify({
+          ...checkout.orders.map(order => {
+            const first = order.items[0];
+            const productImageUrl = first?.product?.images?.[0]?.url || null;
+            const productTitle = first?.product?.title || null;
+            const productNames = order.items.map(item => `${item.product.title} × ${item.quantity}`).join(', ');
+            return notify({
               userId: order.seller.userId,
               type: 'NEW_ORDER',
               subject: `New Fuguaa order ${order.orderNumber}`,
-              message: `You have a new paid order ${order.orderNumber} for ${order.total.toFixed(2)} GHS. Please confirm the order and begin processing it.`,
+              message: `You have a new paid order ${order.orderNumber}: ${productNames}. Order total: ${order.total.toFixed(2)} GHS.`,
               email: order.seller.user.email,
               phone: order.seller.user.phone,
-            })
-          ),
-          notifyAdmin(
-            'New Fuguaa sale',
-            `Payment ${reference} was successful. ${checkout.orders.length} seller order${checkout.orders.length === 1 ? '' : 's'} created. Total: ${checkout.total.toFixed(2)} GHS.`,
-            'NEW_ORDER'
-          ),
+              productImageUrl,
+              productTitle,
+              productId: first?.productId || null,
+              orderId: order.id,
+              sellerShopName: order.seller.shopName,
+            });
+          }),
+          ...checkout.orders.map(order => {
+            const first = order.items[0];
+            const productImageUrl = first?.product?.images?.[0]?.url || null;
+            const productTitle = first?.product?.title || null;
+            const productNames = order.items.map(item => `${item.product.title} × ${item.quantity}`).join(', ');
+            return notifyAdmin(
+              `New sale · ${order.seller.shopName}`,
+              `Seller: ${order.seller.shopName}. Product: ${productNames}. Order ${order.orderNumber}. Total: ${order.total.toFixed(2)} GHS.`,
+              'NEW_ORDER',
+              { productImageUrl, productTitle, productId: first?.productId || null, orderId: order.id, sellerShopName: order.seller.shopName }
+            );
+          }),
         ]);
       } catch (stockError) {
         console.error('PAYMENT_VERIFY_STOCK_CONFLICT', stockError);
