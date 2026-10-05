@@ -16,6 +16,8 @@ export async function POST(req: Request) {
   const s = await getServerSession(authOptions);
   if (!s?.user || (s.user as any).role !== 'BUYER') return NextResponse.json({ error: 'Please log in as a buyer before checkout.' }, { status: 401 });
   try {
+    const publicKey = process.env.PAYSTACK_PUBLIC_KEY || process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
+    if (!publicKey) return NextResponse.json({ error: 'Paystack public key is not configured. Add PAYSTACK_PUBLIC_KEY in Vercel.' }, { status: 503 });
     const parsed = bodySchema.parse(await req.json());
     const ids = Array.from(new Set(parsed.items.map(x => x.id)));
     const products = await prisma.product.findMany({ where: { id: { in: ids }, status: 'ACTIVE' }, include: { seller: true } });
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
     } });
     try {
       const pay = await initializePaystack(s.user.email!, total, ref);
-      return NextResponse.json({ authorization_url: pay.data.authorization_url, reference: ref, checkoutId: checkout.id, email: s.user.email });
+      return NextResponse.json({ authorization_url: pay.data.authorization_url, reference: ref, checkoutId: checkout.id, email: s.user.email, publicKey });
     } catch (e) {
       await prisma.checkout.delete({ where: { id: checkout.id } }).catch(() => undefined);
       throw e;

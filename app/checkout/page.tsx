@@ -11,7 +11,7 @@ export default function Checkout() {
   const [country, setCountry] = useState('Ghana');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [paystack, setPaystack] = useState<{email:string;reference:string;amount:number}|null>(null);
+  const [paystack, setPaystack] = useState<{email:string;reference:string;amount:number;publicKey:string}|null>(null);
   const router = useRouter();
   const selected = useMemo(() => countries.find(c => c.name === country) || countries[0], [country]);
   useEffect(() => {
@@ -39,11 +39,11 @@ export default function Checkout() {
       if (j.reference) {
         const email = String(j.email || '');
         if (!email) throw new Error('Your account email is missing. Please update your profile before paying.');
-        setPaystack({ email, reference: j.reference, amount: total });
+        setPaystack({ email, reference: j.reference, amount: total, publicKey: String(j.publicKey || '') });
       } else router.push('/orders');
     } catch (e: any) { setError(e.message || 'Unable to start payment.'); setBusy(false); }
   }
-  return <>{paystack&&<PaystackInlineCheckout email={paystack.email} reference={paystack.reference} amount={paystack.amount} onClose={()=>setPaystack(null)}/>}<main className="container-x max-w-4xl py-12"><h1 className="text-4xl font-black">Checkout</h1><p className="mt-3 text-black/60">Secure payment through Paystack. Fuguaa never stores your card or mobile-money PIN.</p>
+  return <>{paystack&&<PaystackInlineCheckout email={paystack.email} reference={paystack.reference} amount={paystack.amount} publicKey={paystack.publicKey} onClose={()=>setPaystack(null)}/>}<main className="container-x max-w-4xl py-12"><h1 className="text-4xl font-black">Checkout</h1><p className="mt-3 text-black/60">Secure payment through Paystack. Fuguaa never stores your card or mobile-money PIN.</p>
     <div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_.7fr]"><form onSubmit={pay} className="card p-6"><h2 className="text-xl font-black">Delivery details</h2><div className="mt-5 space-y-4"><input name="name" required className="field" placeholder="Full name"/><div><label className="label">Phone number</label><div className="flex gap-2"><select className="field w-32" value={selected.code} onChange={e=>{const c=countries.find(x=>x.code===e.target.value);if(c)setCountry(c.name)}}>{countries.map(c=><option key={c.code} value={c.code}>{c.dial} · {c.code}</option>)}</select><input name="phone" required className="field flex-1" placeholder="Phone number" inputMode="tel"/></div></div><div><label className="label">Country</label><select name="country" className="field" value={country} onChange={e=>setCountry(e.target.value)}>{countries.map(c=><option key={c.code} value={c.name}>{c.name}</option>)}</select></div><div><label className="label">Region / State / Province</label><select name="region" required className="field"><option value="">Select region</option>{selected.regions.map(r=><option key={r} value={r}>{r}</option>)}</select></div><div className="grid gap-4 sm:grid-cols-2"><input name="city" required className="field" placeholder="City / Town"/><input name="postalCode" className="field" placeholder="Postal code (optional)"/></div><input name="address1" required className="field" placeholder="Street address / house number"/><input name="address2" className="field" placeholder="Apartment, landmark (optional)"/></div>{error&&<p className="mt-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}<button disabled={busy||!items.length} className="btn btn-primary mt-6 w-full">{busy?'Redirecting to secure payment…':`Pay ${money(total)}`}</button></form>
       <aside className="card h-fit p-6"><h2 className="font-black">Order summary</h2>{items.map(x=><div key={x.key} className="mt-4 flex justify-between gap-3 text-sm"><span>{x.title} × {x.quantity}</span><strong>{money(Number(x.price)*x.quantity)}</strong></div>)}<div className="my-6 border-t"/><div className="flex justify-between text-xl font-black"><span>Total</span><span className="text-terracotta">{money(total)}</span></div><p className="mt-4 text-xs leading-5 text-black/50">Payments are processed by Paystack. Fuguaa does not receive or store raw card details.</p><Link href="/cart" className="mt-5 block text-center text-sm font-bold">Back to cart</Link></aside></div></main></>;
 }
