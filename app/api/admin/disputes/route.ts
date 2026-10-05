@@ -3,12 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { refundPaystack } from '@/lib/paystack';
+import { notify, notifyAdmin } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   const s = await getServerSession(authOptions);
   if (!s?.user || (s.user as any).role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { disputeId, action, note } = await req.json();
-  const d = await prisma.dispute.findUnique({ where: { id: disputeId }, include: { order: true } });
+  const d = await prisma.dispute.findUnique({ where: { id: disputeId }, include: { order: { include: { buyer: true, seller: { include: { user: true } } } } } });
   if (!d) return NextResponse.json({ error: 'Dispute not found' }, { status: 404 });
   if (!['refund','release'].includes(action)) return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   if (d.status === 'RESOLVED_REFUND' || d.status === 'RESOLVED_RELEASE') return NextResponse.json({ error: 'This dispute is already resolved.' }, { status: 409 });
@@ -23,6 +24,11 @@ export async function POST(req: Request) {
       prisma.order.update({ where: { id: d.orderId }, data: { status: action === 'refund' ? 'REFUNDED' : 'COMPLETED', paymentStatus: action === 'refund' ? 'REFUNDED' : 'SUCCESS', escrowStatus: action === 'refund' ? 'REFUNDED' : 'RELEASED' } }),
       prisma.auditLog.create({ data: { adminId: (s.user as any).id, action: `DISPUTE_${action.toUpperCase()}`, targetType: 'DISPUTE', targetId: disputeId, metadata: { note: note || null } } })
     ]);
+    const subject = action === 'refund' ? 'Dispute resolved: refund issued' : 'Dispute resolved: payment released';
+    const message = action === 'refund' ? `Your Fuguaa dispute for order ${d.order.orderNumber} was resolved with a refund.` : `Your Fuguaa dispute for order ${d.order.orderNumber} was resolved and the payment was released to the seller.`;
+    await notify({ userId: d.order.buyerId, type: action === 'refund' ? 'DISPUTE_REFUNDED' : 'DISPUTE_RELEASED', subject, message, email: d.order.buyer.email, phone: d.order.buyer.phone });
+    await notify({ userId: d.order.seller.userId, type: action === 'refund' ? 'DISPUTE_REFUNDED' : 'DISPUTE_RELEASED', subject, message: action === 'refund' ? `Order ${d.order.orderNumber}: the buyer dispute was resolved with a refund.` : `Order ${d.order.orderNumber}: the dispute was resolved and the payment was released.`, email: d.order.seller.user.email, phone: d.order.seller.user.phone });
+    await notifyAdmin('Dispute resolved', `Dispute ${disputeId} was resolved with ${action}.`, 'DISPUTE_RESOLVED');
     return NextResponse.json({ ok: true });
   } catch (e: any) { console.error('DISPUTE_RESOLUTION_ERROR', e); return NextResponse.json({ error: e.message || 'Unable to resolve dispute.' }, { status: 400 }); }
 }

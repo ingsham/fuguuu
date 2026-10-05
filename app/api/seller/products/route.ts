@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { notifyAdmin } from '@/lib/notifications';
 
 const schema = z.object({
   title: z.string().trim().min(2).max(120),
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
       occasionTags: data.occasionTags, sizeGuide: data.sizeGuide,
       images: { create: data.images.map((url, index) => ({ url, sortOrder: index, altText: data.title })) },
     }});
+    await notifyAdmin('New Fuguaa listing', `${seller.shopName} created a new listing: ${product.title}.`, 'NEW_LISTING');
     return NextResponse.json({ id: product.id }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof z.ZodError ? 'Please check all product fields.' : 'Unable to create product.' }, { status: 400 });

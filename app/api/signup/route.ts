@@ -4,51 +4,6 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { rateLimit, requestKey } from '@/lib/rate-limit';
-
-const schema = z.object({
-  name: z.string().trim().min(2).max(100),
-  email: z.string().trim().email().transform((v) => v.toLowerCase()),
-  password: z.string().min(8).max(200),
-  phone: z.string().trim().min(7).max(30),
-  country: z.string().trim().min(2).max(80),
-  role: z.enum(['BUYER', 'SELLER']),
-});
-
-export async function POST(req: Request) {
-  const limited = rateLimit(requestKey(req, 'signup'), 8, 10 * 60_000);
-  if (!limited.ok) return NextResponse.json({ error: `Too many signup attempts. Try again in ${limited.retryAfter}s.` }, { status: 429 });
-  try {
-    const body = await req.json();
-    const b = schema.parse(body);
-    const existing = await prisma.user.findUnique({ where: { email: b.email } });
-    if (existing) {
-      return NextResponse.json({ error: 'An account with this email already exists. Please log in.' }, { status: 409 });
-    }
-
-    const passwordHash = await bcrypt.hash(b.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        name: b.name,
-        email: b.email,
-        passwordHash,
-        phone: b.phone,
-        country: b.country,
-        role: b.role,
-        ...(b.role === 'SELLER'
-          ? { sellerProfile: { create: { shopName: `${b.name}'s Shop`, country: b.country } } }
-          : {}),
-      },
-    });
-
-    return NextResponse.json({ id: user.id, role: user.role }, { status: 201 });
-  } catch (error: any) {
-    console.error('SIGNUP_ERROR', error);
-    if (error?.code === 'P2002') {
-      return NextResponse.json({ error: 'An account with this email already exists. Please log in.' }, { status: 409 });
-    }
-    if (error?.name === 'ZodError') {
-      return NextResponse.json({ error: 'Please check all fields and make sure the password is at least 8 characters.' }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'We could not create your account. Please check the database connection and try again.' }, { status: 500 });
-  }
-}
+import { notify } from '@/lib/notifications';
+const schema=z.object({name:z.string().trim().min(2).max(100),email:z.string().trim().email().transform(v=>v.toLowerCase()),password:z.string().min(8).max(200),phone:z.string().trim().min(7).max(30),country:z.string().trim().min(2).max(80),role:z.enum(['BUYER','SELLER'])});
+export async function POST(req:Request){const limited=rateLimit(requestKey(req,'signup'),8,10*60_000);if(!limited.ok)return NextResponse.json({error:`Too many signup attempts. Try again in ${limited.retryAfter}s.`},{status:429});try{const b=schema.parse(await req.json());if(await prisma.user.findUnique({where:{email:b.email}}))return NextResponse.json({error:'An account with this email already exists. Please log in.'},{status:409});const passwordHash=await bcrypt.hash(b.password,12);const user=await prisma.user.create({data:{name:b.name,email:b.email,passwordHash,phone:b.phone,country:b.country,role:b.role,...(b.role==='SELLER'?{sellerProfile:{create:{shopName:`${b.name}'s Shop`,country:b.country}}}:{})}});await notify({userId:user.id,type:'ACCOUNT_CREATED',subject:'Welcome to Fuguaa',message:`Welcome to Fuguaa, ${user.name}. Your account is ready.`,email:user.email,phone:user.phone});return NextResponse.json({id:user.id,role:user.role},{status:201});}catch(error:any){console.error('SIGNUP_ERROR',error);if(error?.code==='P2002')return NextResponse.json({error:'An account with this email already exists. Please log in.'},{status:409});if(error?.name==='ZodError')return NextResponse.json({error:'Please check all fields and make sure the password is at least 8 characters.'},{status:400});return NextResponse.json({error:'We could not create your account. Please check the database connection and try again.'},{status:500})}}

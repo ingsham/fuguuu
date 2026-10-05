@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { verifyPaystack, refundPaystack } from '@/lib/paystack';
-import { sendEmail, sendSms } from '@/lib/notifications';
+import { notify, notifyAdmin } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   const raw = await req.text();
@@ -46,15 +46,10 @@ export async function POST(req: Request) {
         }
         for (const o of checkout.orders) {
           const message = `New Fuguaa order ${o.orderNumber}: GHS ${Number(o.total).toFixed(2)}.`;
-          await Promise.all([
-            sendEmail(o.seller.user.email, 'New Fuguaa order', message),
-            o.seller.user.phone ? sendSms(o.seller.user.phone, message) : Promise.resolve(),
-            prisma.notification.create({ data: { userId: o.seller.userId, type: 'NEW_ORDER', channel: 'EMAIL', subject: 'New Fuguaa order', message, status: 'SENT', sentAt: new Date() } })
-          ]);
-          if (process.env.ADMIN_EMAIL) await sendEmail(process.env.ADMIN_EMAIL, 'New Fuguaa order', message);
+          await notify({ userId: o.seller.userId, type: 'NEW_ORDER', subject: 'New Fuguaa order', message, email: o.seller.user.email, phone: o.seller.user.phone });
+          await notifyAdmin('New Fuguaa order', message, 'NEW_ORDER');
         }
-        await sendEmail(checkout.buyer.email, 'Fuguaa payment confirmed', `Your payment ${ref} was confirmed and your order is now being prepared.`);
-        if (checkout.buyer.phone) await sendSms(checkout.buyer.phone, `Fuguaa payment confirmed: ${ref}`);
+        await notify({ userId: checkout.buyerId, type: 'PAYMENT_SUCCESS', subject: 'Payment confirmed', message: `Your payment ${ref} was confirmed and your order is now being prepared.`, email: checkout.buyer.email, phone: checkout.buyer.phone });
       }
     }
   }

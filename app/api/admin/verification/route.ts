@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { notify } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   const s = await getServerSession(authOptions);
@@ -19,6 +20,8 @@ export async function POST(req: Request) {
           await tx.auditLog.create({ data: { adminId: (s.user as any).id, action: 'SELLER_BULK_APPROVE', targetType: 'SELLER', targetId: seller.id } });
         }
       });
+      const approvedUsers = await prisma.sellerProfile.findMany({ where: { id: { in: pending.map(x => x.id) } }, include: { user: true } });
+      await Promise.allSettled(approvedUsers.map(x => notify({ userId: x.userId, type: 'SELLER_VERIFICATION_APPROVED', subject: 'Seller verification approved', message: 'Your Fuguaa seller verification has been approved. You can now publish listings.', email: x.user.email, phone: x.user.phone })));
       return NextResponse.json({ ok: true, approved: pending.length });
     }
 
@@ -26,11 +29,14 @@ export async function POST(req: Request) {
     if (typeof sellerId !== 'string' || !['approve', 'reject'].includes(action)) return NextResponse.json({ error: 'Invalid verification request.' }, { status: 400 });
     if (action === 'reject' && !String(rejectionReason || '').trim()) return NextResponse.json({ error: 'A rejection reason is required.' }, { status: 400 });
     const status = action === 'approve' ? 'VERIFIED' : 'REJECTED';
+    const sellerRow = await prisma.sellerProfile.findUnique({ where: { id: sellerId }, include: { user: true } });
+    if (!sellerRow) return NextResponse.json({ error: 'Seller not found.' }, { status: 404 });
     await prisma.$transaction([
       prisma.sellerProfile.update({ where: { id: sellerId }, data: { verificationStatus: status as any, verifiedAt: action === 'approve' ? new Date() : null } }),
       prisma.sellerVerification.update({ where: { sellerId }, data: { status: status as any, reviewedAt: new Date(), rejectionReason: action === 'reject' ? String(rejectionReason).trim() : null } }),
       prisma.auditLog.create({ data: { adminId: (s.user as any).id, action: `SELLER_${action.toUpperCase()}`, targetType: 'SELLER', targetId: sellerId, metadata: action === 'reject' ? { rejectionReason: String(rejectionReason).trim() } : undefined } }),
     ]);
+    await notify({ userId: sellerRow.userId, type: action === 'approve' ? 'SELLER_VERIFICATION_APPROVED' : 'SELLER_VERIFICATION_REJECTED', subject: action === 'approve' ? 'Seller verification approved' : 'Seller verification needs attention', message: action === 'approve' ? 'Your Fuguaa seller verification has been approved. You can now publish listings.' : `Your seller verification was not approved. Reason: ${String(rejectionReason).trim()}`, email: sellerRow.user.email, phone: sellerRow.user.phone });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('SELLER_VERIFICATION_ERROR', e);

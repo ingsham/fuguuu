@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { put } from '@vercel/blob';
 import { encryptSensitive, encryptBuffer } from '@/lib/encryption';
+import { notify, notifyAdmin } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -84,6 +85,8 @@ export async function POST(req: Request) {
       }),
     ]);
 
+    await notify({ userId: sellerId, type: 'SELLER_VERIFICATION_SUBMITTED', subject: 'Verification submitted', message: `Your seller verification for ${shopName} has been submitted and is awaiting review.`, email: u.email, phone: u.phone });
+    await notifyAdmin('New seller verification', `${shopName} submitted seller verification and is awaiting review.`, 'NEW_SELLER_VERIFICATION');
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('SELLER_ONBOARDING_ERROR', e);

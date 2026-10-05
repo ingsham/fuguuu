@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     } });
     try {
       const pay = await initializePaystack(s.user.email!, total, ref);
-      return NextResponse.json({ authorization_url: pay.data.authorization_url, reference: ref, checkoutId: checkout.id });
+      return NextResponse.json({ authorization_url: pay.data.authorization_url, reference: ref, checkoutId: checkout.id, email: s.user.email });
     } catch (e) {
       await prisma.checkout.delete({ where: { id: checkout.id } }).catch(() => undefined);
       throw e;

@@ -80,6 +80,7 @@ model User {
   favorites     Favorite[]
   cart          Cart?
   notifications Notification[]
+  notificationPreference NotificationPreference?
   auditLogs     AuditLog[]
 }
 
@@ -285,6 +286,15 @@ model Dispute {
   createdAt      DateTime      @default(now())
   resolvedAt     DateTime?
   order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  inApp     Boolean  @default(true)
+  email     Boolean  @default(true)
+  sms       Boolean  @default(true)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
