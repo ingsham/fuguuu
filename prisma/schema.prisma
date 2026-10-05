@@ -306,8 +306,13 @@ model Notification {
   message   String
   status    String   @default("PENDING")
   createdAt DateTime @default(now())
-  sentAt    DateTime?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sentAt          DateTime?
+  productImageUrl String?
+  productTitle    String?
+  productId       String?
+  orderId         String?
+  sellerShopName  String?
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }
