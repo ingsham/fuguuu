@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { notify } from '@/lib/notifications';
+import { notify, notifyAdmin } from '@/lib/notifications';
 
 const transitions: Record<string, string[]> = { PAID: ['CONFIRMED'], CONFIRMED: ['PROCESSING'], PROCESSING: ['SHIPPED'], SHIPPED: ['DELIVERED'] };
 
@@ -20,7 +20,10 @@ export async function POST(req: Request) {
     const updated = await prisma.order.update({ where: { id: order.id }, data: { status, deliveredAt: status === 'DELIVERED' ? new Date() : order.deliveredAt, shippingCarrier: status === 'SHIPPED' ? String(carrier).trim() : order.shippingCarrier, trackingNumber: status === 'SHIPPED' ? String(trackingNumber).trim() : order.trackingNumber } });
     const subject = `Fuguaa order ${order.orderNumber} is ${status.toLowerCase()}`;
     const message = `Your Fuguaa order ${order.orderNumber} from ${seller.shopName} is now ${status.toLowerCase()}.${status === 'SHIPPED' ? ` Carrier: ${carrier}. Tracking: ${trackingNumber}.` : ''}`;
-    await notify({ userId: order.buyerId, type: `ORDER_${status}`, subject, message, email: order.buyer.email, phone: order.buyer.phone });
+    await Promise.allSettled([
+      notify({ userId: order.buyerId, type: `ORDER_${status}`, subject, message, email: order.buyer.email, phone: order.buyer.phone }),
+      notifyAdmin(`Order ${order.orderNumber} is ${status.toLowerCase()}`, `${seller.shopName} moved order ${order.orderNumber} to ${status.toLowerCase()}.${status === 'SHIPPED' ? ` Carrier: ${carrier}. Tracking: ${trackingNumber}.` : ''}`, `ORDER_${status}`),
+    ]);
     return NextResponse.json({ ok: true, order: updated });
   } catch (error) { console.error(error); return NextResponse.json({ error: 'Unable to update order' }, { status: 400 }); }
 }

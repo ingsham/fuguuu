@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { refundPaystack, verifyPaystack } from '@/lib/paystack';
+import { notify, notifyAdmin } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   const s = await getServerSession(authOptions);
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
 
     const checkout = await prisma.checkout.findFirst({
       where: { reference, buyerId: (s.user as any).id },
-      include: { payment: true, orders: { include: { items: true } } },
+      include: { payment: true, orders: { include: { items: true, seller: { include: { user: true } } } } },
     });
     if (!checkout) return NextResponse.json({ error: 'Checkout not found.' }, { status: 404 });
 
@@ -35,6 +36,34 @@ export async function POST(req: Request) {
             }
           }
         });
+
+        // Payment succeeded and the transaction was claimed. Fan out the sale
+        // notification only once, after stock has been reserved successfully.
+        await Promise.allSettled([
+          notify({
+            userId: checkout.buyerId,
+            type: 'PAYMENT_SUCCESS',
+            subject: 'Payment confirmed',
+            message: `Your Fuguaa payment ${reference} was successful. Your order is now being prepared.`,
+            email: (s.user as any).email,
+            phone: (s.user as any).phone,
+          }),
+          ...checkout.orders.map(order =>
+            notify({
+              userId: order.seller.userId,
+              type: 'NEW_ORDER',
+              subject: `New Fuguaa order ${order.orderNumber}`,
+              message: `You have a new paid order ${order.orderNumber} for ${order.total.toFixed(2)} GHS. Please confirm the order and begin processing it.`,
+              email: order.seller.user.email,
+              phone: order.seller.user.phone,
+            })
+          ),
+          notifyAdmin(
+            'New Fuguaa sale',
+            `Payment ${reference} was successful. ${checkout.orders.length} seller order${checkout.orders.length === 1 ? '' : 's'} created. Total: ${checkout.total.toFixed(2)} GHS.`,
+            'NEW_ORDER'
+          ),
+        ]);
       } catch (stockError) {
         console.error('PAYMENT_VERIFY_STOCK_CONFLICT', stockError);
         try {
